@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -29,6 +28,7 @@ import com.peter.mediq.Navigation.ROUTE_UPLOAD_POST
 import com.peter.mediq.R
 import com.peter.mediq.viewmodel.AuthViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
@@ -57,23 +57,25 @@ fun LoginScreen(
         }
     }
 
+    // --- Start of new UI and color scheme for a first-aid app ---
+    val primaryLight = Color(0xFFF0F2F5) // Very light gray for background
+    val accentRed = Color(0xFFE7190A) // Clean, iconic red for first-aid
+    val cardColor = Color.White // Pure white for a clean look
+    val darkText = Color(0xFF333333) // Dark gray for high-contrast text
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(Color(0xFFF2F3F5), Color(0xFFE51708))
-                )
-            )
+            .background(primaryLight)
             .padding(24.dp),
         contentAlignment = Alignment.Center
     ) {
         Card(
             modifier = Modifier
-                .fillMaxWidth()
+                .width(360.dp)
                 .padding(horizontal = 16.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF565252)),
+            colors = CardDefaults.cardColors(containerColor = cardColor),
             elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
         ) {
             Column(
@@ -81,18 +83,18 @@ fun LoginScreen(
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Welcome Back 👋",
-                    fontSize = 24.sp,
+                    text = "Welcome Back",
+                    fontSize = 30.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    color = accentRed
                 )
 
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Text(
                     text = "Login to continue",
-                    fontSize = 14.sp,
-                    color = Color(0xFF8D5A5A)
+                    fontSize = 16.sp,
+                    color = darkText.copy(alpha = 0.7f)
                 )
 
                 Spacer(modifier = Modifier.height(32.dp))
@@ -101,11 +103,20 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = { Text("Email") },
+                    label = { Text("Email", color = Color.Gray) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White)
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = darkText),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentRed,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = accentRed,
+                        focusedLabelColor = accentRed,
+                        unfocusedLabelColor = Color.Gray
+                    )
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -114,19 +125,28 @@ fun LoginScreen(
                 OutlinedTextField(
                     value = password,
                     onValueChange = { password = it },
-                    label = { Text("Password") },
+                    label = { Text("Password", color = Color.Gray) },
                     visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = Color.White),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = darkText),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentRed,
+                        unfocusedBorderColor = Color.Gray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = accentRed,
+                        focusedLabelColor = accentRed,
+                        unfocusedLabelColor = Color.Gray
+                    ),
                     trailingIcon = {
                         IconButton(onClick = { passwordVisible = !passwordVisible }) {
                             Icon(
                                 painter = if (passwordVisible) painterResource(R.drawable.passwordshow)
                                 else painterResource(R.drawable.passwordhide),
                                 contentDescription = if (passwordVisible) "Hide Password" else "Show Password",
-                                tint = Color(0xFFD00C0C)
+                                tint = accentRed
                             )
                         }
                     }
@@ -137,6 +157,7 @@ fun LoginScreen(
                 // Login Button
                 Button(
                     onClick = {
+                        // FUNCTIONALITY REMAINS UNCHANGED
                         if (email.isBlank() || password.isBlank()) {
                             Toast.makeText(context, "Please enter email and password", Toast.LENGTH_SHORT).show()
                         } else {
@@ -144,8 +165,9 @@ fun LoginScreen(
                         }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFE7190A)),
-                    shape = RoundedCornerShape(12.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = accentRed),
+                    shape = RoundedCornerShape(12.dp),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
                 ) {
                     Text("Login", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -155,12 +177,12 @@ fun LoginScreen(
                 // Navigate to Register
                 TextButton(onClick = { navController.navigate(ROUTE_REGISTER) }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("Don’t have an account?", color = Color.White)
+                        Text("\"New to Mediq?\"", color = darkText)
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             Icons.Filled.ArrowForward,
                             contentDescription = "Sign up",
-                            tint = Color.White,
+                            tint = accentRed,
                             modifier = Modifier.size(18.dp)
                         )
                     }

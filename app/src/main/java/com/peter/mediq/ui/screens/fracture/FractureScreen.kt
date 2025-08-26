@@ -24,7 +24,7 @@ import com.peter.mediq.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun FracturesScreen(navController: NavController) {
+fun FractureScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(

@@ -37,7 +37,7 @@ import java.io.InputStream
 import java.io.OutputStream
 import java.util.*
 
-// ---------- Room Database ----------
+// --- UNCHANGED ROOM DATABASE & VIEWMODEL CODE ---
 @Entity
 data class EmergencyPost(
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
@@ -50,27 +50,43 @@ data class EmergencyPost(
 
 @Dao
 interface EmergencyPostDao {
-    @Insert suspend fun insert(post: EmergencyPost)
-    @Update suspend fun update(post: EmergencyPost)
-    @Delete suspend fun delete(post: EmergencyPost)
+    @Insert
+    suspend fun insert(post: EmergencyPost)
+    @Update
+    suspend fun update(post: EmergencyPost)
+    @Delete
+    suspend fun delete(post: EmergencyPost)
     @Query("SELECT * FROM EmergencyPost ORDER BY id DESC")
     fun getAllPosts(): kotlinx.coroutines.flow.Flow<List<EmergencyPost>>
 }
 
 @Database(entities = [EmergencyPost::class], version = 1)
-abstract class AppDatabase : RoomDatabase() { abstract fun emergencyPostDao(): EmergencyPostDao }
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun emergencyPostDao(): EmergencyPostDao
+}
 
-// ---------- ViewModel ----------
 class EmergencyViewModel(private val dao: EmergencyPostDao) : androidx.lifecycle.ViewModel() {
     var posts by mutableStateOf(listOf<EmergencyPost>())
         private set
-    init { viewModelScope.launch { dao.getAllPosts().collect { posts = it } } }
+
+    init {
+        // Initial data load
+        refreshPosts()
+    }
+
     fun addPost(post: EmergencyPost) = viewModelScope.launch { dao.insert(post) }
     fun deletePost(post: EmergencyPost) = viewModelScope.launch { dao.delete(post) }
     fun updatePost(post: EmergencyPost) = viewModelScope.launch { dao.update(post) }
+
+    // New function to refresh data from the database
+    fun refreshPosts() = viewModelScope.launch {
+        dao.getAllPosts().collect {
+            posts = it
+        }
+    }
 }
 
-// ---------- Composable Screen ----------
+// --- Composable Screen with New Design and Fixes ---
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun UploadPostScreen(navController: NavController) {
@@ -80,6 +96,7 @@ fun UploadPostScreen(navController: NavController) {
             .fallbackToDestructiveMigration().build()
     }
     val viewModel = remember { EmergencyViewModel(db.emergencyPostDao()) }
+    val scope = rememberCoroutineScope() // Get a CoroutineScope
 
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -93,37 +110,40 @@ fun UploadPostScreen(navController: NavController) {
         uri?.let { imageUri = saveImageToInternalStorage(context, it) }
     }
 
+    // --- Start of New Color Scheme ---
+    val primaryLight = Color(0xFFF0F2F5)
+    val accentRed = Color(0xFFE7190A)
+    val cardColor = Color.White
+    val darkText = Color(0xFF333333)
+
     Scaffold(
         topBar = {
             TopAppBar(
                 title = { Text("🚨 Emergency Admin", fontWeight = FontWeight.Bold) },
                 colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color(0xFF1565C0),
+                    containerColor = accentRed,
                     titleContentColor = Color.White
                 ),
                 actions = {
-                    IconButton(onClick = {}) {
-                        Icon(Icons.Default.Refresh, tint = Color.White, contentDescription = null)
+                    // Update onClick to call the refreshPosts function
+                    IconButton(onClick = { scope.launch { viewModel.refreshPosts() } }) {
+                        Icon(Icons.Default.Refresh, tint = Color.White, contentDescription = "Refresh posts")
                     }
                 }
             )
         },
         bottomBar = {
-            NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
+            NavigationBar(containerColor = cardColor, tonalElevation = 8.dp) {
                 NavigationBarItem(
-                    icon = { Icon(Icons.Default.Home, contentDescription = "Home", tint = Color(0xFF1565C0)) },
+                    icon = { Icon(Icons.Default.Home, contentDescription = "Home", tint = accentRed) },
                     selected = true,
-                    onClick = { navController.navigate(ROUTE_HOME)}
+                    onClick = { navController.navigate(ROUTE_HOME) }
                 )
-                NavigationBarItem(
-                    icon = { Icon(Icons.Default.Notifications, contentDescription = "Notifications", tint = Color.Gray) },
-                    selected = false,
-                    onClick = {navController.navigate(ROUTE_NOTIFICATION) }
-                )
+
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Settings, contentDescription = "Settings", tint = Color.Gray) },
                     selected = false,
-                    onClick = {navController.navigate(ROUTE_SETTING) }
+                    onClick = { navController.navigate(ROUTE_SETTING) }
                 )
             }
         },
@@ -134,7 +154,7 @@ fun UploadPostScreen(navController: NavController) {
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        listOf(Color(0xFFE3F2FD), Color(0xFFBBDEFB))
+                        listOf(primaryLight, cardColor)
                     )
                 )
                 .padding(padding)
@@ -142,46 +162,87 @@ fun UploadPostScreen(navController: NavController) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp, vertical = 24.dp)
                     .verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(20.dp)
             ) {
-                // ---------- Form ----------
-                Text("Create / Edit Post", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                // --- Form Section ---
+                Text("Create / Edit Post", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = darkText)
 
                 OutlinedTextField(
                     value = title, onValueChange = { title = it },
-                    label = { Text("Title") }, modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Menu, contentDescription = null, tint = Color(0xFF1565C0)) }
+                    label = { Text("Title", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Menu, contentDescription = null, tint = accentRed) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentRed,
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = accentRed,
+                        focusedLabelColor = accentRed,
+                        unfocusedLabelColor = Color.Gray
+                    )
                 )
+
                 OutlinedTextField(
                     value = description, onValueChange = { description = it },
-                    label = { Text("Description") }, modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Info, contentDescription = null, tint = Color(0xFF1565C0)) }
+                    label = { Text("Description", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Info, contentDescription = null, tint = accentRed) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentRed,
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = accentRed,
+                        focusedLabelColor = accentRed,
+                        unfocusedLabelColor = Color.Gray
+                    )
                 )
+
                 OutlinedTextField(
                     value = location, onValueChange = { location = it },
-                    label = { Text("Location") }, modifier = Modifier.fillMaxWidth(),
-                    leadingIcon = { Icon(Icons.Default.Place, contentDescription = null, tint = Color(0xFF1565C0)) }
+                    label = { Text("Location", color = Color.Gray) },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.Place, contentDescription = null, tint = accentRed) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = accentRed,
+                        unfocusedBorderColor = Color.LightGray,
+                        focusedContainerColor = Color.White,
+                        unfocusedContainerColor = Color.White,
+                        cursorColor = accentRed,
+                        focusedLabelColor = accentRed,
+                        unfocusedLabelColor = Color.Gray
+                    )
                 )
 
                 Box {
                     OutlinedTextField(
-                        value = severity, onValueChange = {}, label = { Text("Severity") }, readOnly = true,
+                        value = severity, onValueChange = {}, label = { Text("Severity", color = Color.Gray) }, readOnly = true,
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { expanded = true },
-                        leadingIcon = { Icon(Icons.Default.Warning, contentDescription = null, tint = Color.Red) }
+                        leadingIcon = { Icon(Icons.Default.Warning, contentDescription = null, tint = accentRed) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = accentRed,
+                            unfocusedBorderColor = Color.LightGray,
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White,
+                            cursorColor = accentRed,
+                            focusedLabelColor = accentRed,
+                            unfocusedLabelColor = Color.Gray
+                        )
                     )
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         listOf("Low", "Medium", "High", "Critical", "Immediate", "Extreme").forEach { level ->
                             val color = when (level) {
                                 "Low" -> Color.Green
                                 "Medium" -> Color.Yellow
-                                "High" -> Color(0xFFFFA000)
+                                "High" -> Color.Red.copy(alpha = 0.8f)
                                 "Critical" -> Color.Red
-                                "Immediate" -> Color.Magenta
-                                else -> Color.Cyan
+                                "Immediate" -> Color.Red.copy(alpha = 0.9f)
+                                else -> Color.Red
                             }
                             DropdownMenuItem(
                                 text = { Text(level, color = color, fontWeight = FontWeight.Bold) },
@@ -193,28 +254,46 @@ fun UploadPostScreen(navController: NavController) {
 
                 Box(
                     modifier = Modifier
-                        .size(180.dp)
+                        .fillMaxWidth()
+                        .height(200.dp)
                         .clip(RoundedCornerShape(20.dp))
-                        .background(Color(0xFF90CAF9))
-                        .border(2.dp, Color(0xFF1565C0), RoundedCornerShape(20.dp))
+                        .background(Color.White)
+                        .border(2.dp, Color.LightGray, RoundedCornerShape(20.dp))
                         .clickable { pickImageLauncher.launch("image/*") },
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(if (imageUri == null) "📷 Pick Image" else "✅ Image Selected", color = Color.White, fontWeight = FontWeight.Bold)
+                    if (imageUri == null) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(Icons.Default.Person, contentDescription = "Add Photo", tint = accentRed, modifier = Modifier.size(48.dp))
+                            Spacer(Modifier.height(8.dp))
+                            Text("Add Photo", color = accentRed, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        Image(
+                            painter = rememberAsyncImagePainter(imageUri),
+                            contentDescription = "Selected Image",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
                 }
 
                 Button(
                     onClick = {
                         val post = EmergencyPost(editingPostId ?: 0, title, description, location, severity, imageUri?.toString())
-                        if (editingPostId != null) { viewModel.updatePost(post); editingPostId = null }
-                        else viewModel.addPost(post)
+                        if (editingPostId != null) {
+                            viewModel.updatePost(post)
+                            editingPostId = null
+                        } else {
+                            viewModel.addPost(post)
+                        }
                         title = ""; description = ""; location = ""; severity = "Low"; imageUri = null
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp)
-                        .shadow(12.dp, RoundedCornerShape(28.dp)),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
+                        .shadow(8.dp, RoundedCornerShape(28.dp)),
+                    colors = ButtonDefaults.buttonColors(containerColor = accentRed)
                 ) {
                     Text(
                         if (editingPostId != null) "Update Post" else "Post Emergency Alert",
@@ -223,16 +302,16 @@ fun UploadPostScreen(navController: NavController) {
                     )
                 }
 
-                Divider(thickness = 2.dp, color = Color.Gray.copy(alpha = 0.3f))
+                Divider(thickness = 1.dp, color = Color.Gray.copy(alpha = 0.2f))
 
-                // ---------- View Posts ----------
-                Text("All Emergency Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                // --- View Posts Section ---
+                Text("All Emergency Posts", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = darkText)
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                     viewModel.posts.forEach { post ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .shadow(6.dp, RoundedCornerShape(20.dp))
+                                .shadow(4.dp, RoundedCornerShape(16.dp))
                                 .pointerInput(Unit) {
                                     detectTapGestures(
                                         onLongPress = { viewModel.deletePost(post) },
@@ -246,8 +325,8 @@ fun UploadPostScreen(navController: NavController) {
                                         }
                                     )
                                 },
-                            shape = RoundedCornerShape(20.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF1F8E9))
+                            shape = RoundedCornerShape(16.dp),
+                            colors = CardDefaults.cardColors(containerColor = cardColor)
                         ) {
                             Column(modifier = Modifier.padding(16.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -258,21 +337,21 @@ fun UploadPostScreen(navController: NavController) {
                                             .background(
                                                 when (post.severity) {
                                                     "Low" -> Color.Green
-                                                    "Medium" -> Color.Yellow
-                                                    "High" -> Color(0xFFFFA000)
-                                                    "Critical" -> Color.Red
-                                                    "Immediate" -> Color.Magenta
-                                                    else -> Color.Cyan
+                                                    "Medium" -> Color(0xFFFFA000)
+                                                    "High" -> Color.Red
+                                                    "Critical" -> Color(0xFFB71C1C)
+                                                    "Immediate" -> Color(0xFFC62828)
+                                                    else -> Color.Red
                                                 }
                                             )
                                     )
-                                    Text(post.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                                    Text(post.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = darkText)
                                 }
                                 Spacer(Modifier.height(4.dp))
-                                Text(post.description, style = MaterialTheme.typography.bodyMedium)
-                                Spacer(Modifier.height(4.dp))
-                                Text("📍 Location: ${post.location}", style = MaterialTheme.typography.bodySmall)
-                                Text("⚠️ Severity: ${post.severity}", style = MaterialTheme.typography.bodySmall)
+                                Text(post.description, style = MaterialTheme.typography.bodyMedium, color = darkText.copy(alpha = 0.8f))
+                                Spacer(Modifier.height(8.dp))
+                                Text("📍 Location: ${post.location}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+                                Text("⚠️ Severity: ${post.severity}", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
                                 post.imageUri?.let {
                                     Image(
                                         painter = rememberAsyncImagePainter(it),
@@ -280,7 +359,7 @@ fun UploadPostScreen(navController: NavController) {
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .height(200.dp)
-                                            .clip(RoundedCornerShape(16.dp))
+                                            .clip(RoundedCornerShape(12.dp))
                                             .padding(top = 8.dp),
                                         contentScale = ContentScale.Crop
                                     )
@@ -294,7 +373,7 @@ fun UploadPostScreen(navController: NavController) {
     }
 }
 
-// ---------- Save Image Permanently ----------
+// --- UNCHANGED HELPER FUNCTION ---
 fun saveImageToInternalStorage(context: Context, uri: Uri): Uri {
     val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
     val file = File(context.filesDir, "emergency_${UUID.randomUUID()}.jpg")

@@ -18,6 +18,9 @@ const val ROUTE_HEAT = "heat"
 const val ROUTE_FIRSTAID = "firstaid"
 const val ROUTE_CALL = "call"
 const val ROUTE_SPLASH = "splash"
+const val ROUTE_ACCOUNT = "account"
+const val ROUTE_HELP = "help"
+const val ROUTE_PRIVACY = "privacy"
 
 // Auth routes
 const val ROUTE_REGISTER = "register"
